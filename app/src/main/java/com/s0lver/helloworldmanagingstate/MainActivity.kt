@@ -1,6 +1,7 @@
 package com.s0lver.helloworldmanagingstate
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -29,9 +30,15 @@ class MainActivity : ComponentActivity() {
             HelloWorldManagingStateTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Android",
                         currentForecast = currentForecast,
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        onChange = {
+                            currentForecast = it
+                            Log.i(
+                                "WeatherForecast",
+                                "Tomorrow will be ${currentForecast.day} and ${currentForecast.weather}"
+                            )
+                        }
                     )
                 }
             }
@@ -40,23 +47,38 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, currentForecast: WeatherForecast, modifier: Modifier = Modifier) {
+fun Greeting(
+    currentForecast: WeatherForecast,
+    modifier: Modifier = Modifier,
+    onChange: (WeatherForecast) -> Unit
+) {
     Column {
+        Text(
+            text = "Today is ${currentForecast.day} and it is ${currentForecast.weather}",
+            modifier = modifier
+        )
+
         Button(onClick = {
-            // TODO: produce state change and handle it...
-        }) { Text(text = "Click me $name") }
+            var day = currentForecast.day + 1
+            if (day > 31) {
+                day = 1
+            }
+
+            val weather =
+                Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
+            currentForecast.day = day
+            currentForecast.weather = weather
+            // TODO: fix the state hoisting issue
+            onChange(currentForecast)
+        }) { Text(text = "How would tomorrow be?") }
     }
-    Text(
-        text = "Today is ${currentForecast.day} and it is ${currentForecast.weather}",
-        modifier = modifier
-    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     HelloWorldManagingStateTheme {
-        Greeting("Android", WeatherForecast(1, Weather.Cloudy))
+        Greeting(WeatherForecast(1, Weather.Cloudy), onChange = {})
     }
 }
 

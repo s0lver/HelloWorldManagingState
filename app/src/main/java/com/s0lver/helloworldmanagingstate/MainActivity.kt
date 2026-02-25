@@ -41,13 +41,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String, currentForecast: WeatherForecast, modifier: Modifier = Modifier) {
-    Column() {
+    Column {
         Button(onClick = {
             // TODO: produce state change and handle it...
         }) { Text(text = "Click me $name") }
     }
     Text(
-        text = "Today is $currentForecast.day and it is $currentForecast.weather",
+        text = "Today is ${currentForecast.day} and it is ${currentForecast.weather}",
         modifier = modifier
     )
 }

@@ -25,7 +25,8 @@ import java.util.Date
 import java.util.Locale
 
 private const val temperature = 22
-private val dateFormatter = SimpleDateFormat("MMM d", Locale.getDefault())
+private val dateFormatter: SimpleDateFormat
+    get() = SimpleDateFormat("MMM d", Locale.getDefault())
 private val calendar = Calendar.getInstance()
 
 class MainActivity : ComponentActivity() {
@@ -81,7 +82,11 @@ fun Greeting(
 
             // calendar.time is creating a new Date object on the fly, weird huh
             val updatedForecast =
-                currentForecast.copy(date = calendar.time, weather = weather, temperature = temperature)
+                currentForecast.copy(
+                    date = calendar.time,
+                    weather = weather,
+                    temperature = temperature
+                )
 
             // Passing a different reference back in the event causes the Composable to see that a
             // new object is returned and forcing the UI update

@@ -66,7 +66,7 @@ fun Greeting(
             val weather =
                 Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
 
-            val updatedForecast = WeatherForecast(day, weather)
+            val updatedForecast = currentForecast.copy(day = day, weather = weather)
             // Passing a different reference back in the event causes the Composable to see that a
             // new object is returned and forcing the UI update
             onChange(updatedForecast)
@@ -86,4 +86,4 @@ enum class Weather {
     Sunny, Cloudy, Rainy, Snowy
 }
 
-class WeatherForecast(var day: Int, var weather: Weather)
+data class WeatherForecast(var day: Int, var weather: Weather)

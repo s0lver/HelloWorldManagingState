@@ -19,13 +19,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.s0lver.helloworldmanagingstate.ui.theme.HelloWorldManagingStateTheme
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+private const val temperature = 22
+private val dateFormatter = SimpleDateFormat("MMM d", Locale.getDefault())
+private val calendar = Calendar.getInstance()
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var currentForecast by remember { mutableStateOf(WeatherForecast(1, Weather.Sunny)) }
+            var currentForecast by remember {
+                mutableStateOf(
+                    WeatherForecast(
+                        Date(), Weather.Sunny,
+                        temperature
+                    )
+                )
+            }
 
             HelloWorldManagingStateTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -36,7 +51,7 @@ class MainActivity : ComponentActivity() {
                             currentForecast = it
                             Log.i(
                                 "WeatherForecast",
-                                "Tomorrow will be ${currentForecast.day} and ${currentForecast.weather}"
+                                "Tomorrow will be ${currentForecast.date} and ${currentForecast.weather}"
                             )
                         })
                 }
@@ -53,20 +68,21 @@ fun Greeting(
 ) {
     Column {
         Text(
-            text = "Today is ${currentForecast.day} and it is ${currentForecast.weather}",
+            text = "Today is ${dateFormatter.format(currentForecast.date)} and it is ${currentForecast.weather}",
             modifier = modifier
         )
 
         Button(onClick = {
-            var day = currentForecast.day + 1
-            if (day > 31) {
-                day = 1
-            }
+            calendar.time = currentForecast.date
+            calendar.add(Calendar.DAY_OF_MONTH, 1)
 
             val weather =
                 Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
 
-            val updatedForecast = currentForecast.copy(day = day, weather = weather)
+            // calendar.time is creating a new Date object on the fly, weird huh
+            val updatedForecast =
+                currentForecast.copy(date = calendar.time, weather = weather, temperature = temperature)
+
             // Passing a different reference back in the event causes the Composable to see that a
             // new object is returned and forcing the UI update
             onChange(updatedForecast)
@@ -78,7 +94,7 @@ fun Greeting(
 @Composable
 fun GreetingPreview() {
     HelloWorldManagingStateTheme {
-        Greeting(WeatherForecast(1, Weather.Cloudy), onChange = {})
+        Greeting(WeatherForecast(Date(), Weather.Cloudy, temperature), onChange = {})
     }
 }
 
@@ -86,4 +102,4 @@ enum class Weather {
     Sunny, Cloudy, Rainy, Snowy
 }
 
-data class WeatherForecast(var day: Int, var weather: Weather)
+data class WeatherForecast(val date: Date, val weather: Weather, val temperature: Int)

@@ -38,8 +38,7 @@ class MainActivity : ComponentActivity() {
                                 "WeatherForecast",
                                 "Tomorrow will be ${currentForecast.day} and ${currentForecast.weather}"
                             )
-                        }
-                    )
+                        })
                 }
             }
         }
@@ -66,10 +65,11 @@ fun Greeting(
 
             val weather =
                 Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
-            currentForecast.day = day
-            currentForecast.weather = weather
-            // TODO: fix the state hoisting issue
-            onChange(currentForecast)
+
+            val updatedForecast = WeatherForecast(day, weather)
+            // Passing a different reference back in the event causes the Composable to see that a
+            // new object is returned and forcing the UI update
+            onChange(updatedForecast)
         }) { Text(text = "How would tomorrow be?") }
     }
 }

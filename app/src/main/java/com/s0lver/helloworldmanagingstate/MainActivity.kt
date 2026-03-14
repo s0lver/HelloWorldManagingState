@@ -103,8 +103,3 @@ fun GreetingPreview() {
     }
 }
 
-enum class Weather {
-    Sunny, Cloudy, Rainy, Snowy
-}
-
-data class WeatherForecast(val date: Date, val weather: Weather, val temperature: Int)

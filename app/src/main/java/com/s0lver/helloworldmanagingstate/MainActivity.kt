@@ -1,5 +1,6 @@
 package com.s0lver.helloworldmanagingstate
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -15,14 +16,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.android.volley.Request
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
 import com.s0lver.helloworldmanagingstate.ui.theme.HelloWorldManagingStateTheme
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+
 
 private const val temperature = 22
 private val dateFormatter: SimpleDateFormat
@@ -67,6 +75,9 @@ fun Greeting(
     modifier: Modifier = Modifier,
     onChange: (WeatherForecast) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
     Column {
         Text(
             text = "Today is ${dateFormatter.format(currentForecast.date)} and it is ${currentForecast.weather}",
@@ -91,8 +102,38 @@ fun Greeting(
             // Passing a different reference back in the event causes the Composable to see that a
             // new object is returned and forcing the UI update
             onChange(updatedForecast)
+
+            // Checking out the network request approach
+            scope.launch {
+                // No need to wrap this in withContext(Dispatchers.IO) anymore!
+                // The function handles its own threading.
+                val result = doNetworkCall(context)
+
+                // You are back on the Main thread here automatically
+                Log.i("Network", "Result: $result")
+            }
         }) { Text(text = "How would tomorrow be?") }
     }
+}
+
+suspend fun doNetworkCall(context: Context) {
+    val queue = Volley.newRequestQueue(context)
+    val url =
+        "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1"
+
+    val jsonRequest = JsonObjectRequest(
+        Request.Method.GET, url, null,
+        { response ->
+            // Success: response is a JSONObject
+            val elevation = response.getString("elevation")
+            println("Elevation is $elevation")
+        },
+        { error ->
+            // Error: handle the exception
+            println("That didn't work: ${error.message}")
+        })
+
+    queue.add(jsonRequest)
 }
 
 @Preview(showBackground = true)

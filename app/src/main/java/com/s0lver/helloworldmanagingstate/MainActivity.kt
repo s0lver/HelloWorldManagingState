@@ -45,8 +45,7 @@ class MainActivity : ComponentActivity() {
             var currentForecast by remember {
                 mutableStateOf(
                     WeatherForecast(
-                        Date(), Weather.CLEAR_SKY,
-                        DEFAULT_TEMPERATURE
+                        Date(), Weather.CLEAR_SKY, DEFAULT_TEMPERATURE
                     )
                 )
             }
@@ -92,12 +91,9 @@ fun Greeting(
                 Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
 
             // calendar.time is creating a new Date object on the fly, weird huh
-            val updatedForecast =
-                currentForecast.copy(
-                    date = calendar.time,
-                    weather = weather,
-                    temperature = DEFAULT_TEMPERATURE
-                )
+            val updatedForecast = currentForecast.copy(
+                date = calendar.time, weather = weather, temperature = DEFAULT_TEMPERATURE
+            )
 
             // Passing a different reference back in the event causes the Composable to see that a
             // new object is returned and forcing the UI update
@@ -118,28 +114,27 @@ fun doNetworkCall(context: Context) {
     val url =
         "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1&&current=weather_code,temperature_2m"
 
-    val jsonRequest = JsonObjectRequest(
-        Request.Method.GET, url, null,
-        { response ->
-            // Success: response is a JSONObject
-            val dailyNode = response.getJSONObject("daily")
-            val minTemperature = dailyNode.getJSONArray("temperature_2m_min").getDouble(0)
-            val maxTemperature = dailyNode.getJSONArray("temperature_2m_max").getDouble(0)
+    val jsonRequest = JsonObjectRequest(Request.Method.GET, url, null, { response ->
+        // Success: response is a JSONObject
+        val dailyNode = response.getJSONObject("daily")
+        val minTemperature = dailyNode.getJSONArray("temperature_2m_min").getDouble(0)
+        val maxTemperature = dailyNode.getJSONArray("temperature_2m_max").getDouble(0)
 
-            val currentNode = response.getJSONObject("current")
-            val weatherCode = currentNode.getInt("weather_code")
-            val currentTemperature = currentNode.getInt("temperature_2m")
+        val currentNode = response.getJSONObject("current")
+        val weatherCode = currentNode.getInt("weather_code")
+        val currentTemperature = currentNode.getDouble("temperature_2m")
 
-            val weather = Weather.fromCode(weatherCode)
-            Log.i(
-                "Network",
-                "Weather is $weather currently $currentTemperature, min: $minTemperature, max: $maxTemperature"
-            )
-        },
-        { error ->
-            // Error: handle the exception
-            Log.e("Network", "That didn't work: ${error.message}")
-        })
+        val weather = Weather.fromCode(weatherCode)
+        val currentWeather =
+            CurrentWeather(weather, currentTemperature, minTemperature, maxTemperature)
+        Log.i(
+            "Network",
+            "Weather is ${currentWeather.weather} currently ${currentWeather.temperature}, min: ${currentWeather.minTemperature}, max: ${currentWeather.maxTemperature}"
+        )
+    }, { error ->
+        // Error: handle the exception
+        Log.e("Network", "That didn't work: ${error.message}")
+    })
 
     queue.add(jsonRequest)
 }

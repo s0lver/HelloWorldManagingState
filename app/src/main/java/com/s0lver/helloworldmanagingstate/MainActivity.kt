@@ -32,7 +32,7 @@ import java.util.Date
 import java.util.Locale
 
 
-private const val temperature = 22
+private const val DEFAULT_TEMPERATURE = 22
 private val dateFormatter: SimpleDateFormat
     get() = SimpleDateFormat("MMM d", Locale.getDefault())
 private val calendar = Calendar.getInstance()
@@ -45,8 +45,8 @@ class MainActivity : ComponentActivity() {
             var currentForecast by remember {
                 mutableStateOf(
                     WeatherForecast(
-                        Date(), Weather.Sunny,
-                        temperature
+                        Date(), Weather.CLEAR_SKY,
+                        DEFAULT_TEMPERATURE
                     )
                 )
             }
@@ -96,7 +96,7 @@ fun Greeting(
                 currentForecast.copy(
                     date = calendar.time,
                     weather = weather,
-                    temperature = temperature
+                    temperature = DEFAULT_TEMPERATURE
                 )
 
             // Passing a different reference back in the event causes the Composable to see that a
@@ -107,30 +107,38 @@ fun Greeting(
             scope.launch {
                 // No need to wrap this in withContext(Dispatchers.IO) anymore!
                 // The function handles its own threading.
-                val result = doNetworkCall(context)
-
-                // You are back on the Main thread here automatically
-                Log.i("Network", "Result: $result")
+                doNetworkCall(context)
             }
         }) { Text(text = "How would tomorrow be?") }
     }
 }
 
-suspend fun doNetworkCall(context: Context) {
+fun doNetworkCall(context: Context) {
     val queue = Volley.newRequestQueue(context)
     val url =
-        "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1"
+        "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1&&current=weather_code,temperature_2m"
 
     val jsonRequest = JsonObjectRequest(
         Request.Method.GET, url, null,
         { response ->
             // Success: response is a JSONObject
-            val elevation = response.getString("elevation")
-            println("Elevation is $elevation")
+            val dailyNode = response.getJSONObject("daily")
+            val minTemperature = dailyNode.getJSONArray("temperature_2m_min").getDouble(0)
+            val maxTemperature = dailyNode.getJSONArray("temperature_2m_max").getDouble(0)
+
+            val currentNode = response.getJSONObject("current")
+            val weatherCode = currentNode.getInt("weather_code")
+            val currentTemperature = currentNode.getInt("temperature_2m")
+
+            val weather = Weather.fromCode(weatherCode)
+            Log.i(
+                "Network",
+                "Weather is $weather currently $currentTemperature, min: $minTemperature, max: $maxTemperature"
+            )
         },
         { error ->
             // Error: handle the exception
-            println("That didn't work: ${error.message}")
+            Log.e("Network", "That didn't work: ${error.message}")
         })
 
     queue.add(jsonRequest)
@@ -140,12 +148,11 @@ suspend fun doNetworkCall(context: Context) {
 @Composable
 fun GreetingPreview() {
     HelloWorldManagingStateTheme {
-        Greeting(WeatherForecast(Date(), Weather.Cloudy, temperature), onChange = {})
+        Greeting(WeatherForecast(Date(), Weather.PARTLY_CLOUDY, DEFAULT_TEMPERATURE), onChange = {})
     }
 }
 
 /*
-TODO: Use this free API for weather forecast:
 https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1
 You will get responses like:
 {

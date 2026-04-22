@@ -50,10 +50,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
+            var currentWeather by remember { mutableStateOf<CurrentWeather?>(null) }
+
             HelloWorldManagingStateTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
                         currentForecast = currentForecast,
+                        currentWeather = currentWeather,
                         modifier = Modifier.padding(innerPadding),
                         onChange = {
                             currentForecast = it
@@ -61,7 +64,8 @@ class MainActivity : ComponentActivity() {
                                 "WeatherForecast",
                                 "Tomorrow will be ${currentForecast.date} and ${currentForecast.weather}"
                             )
-                        })
+                        },
+                        onWeatherFetched = { currentWeather = it })
                 }
             }
         }
@@ -71,8 +75,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Greeting(
     currentForecast: WeatherForecast,
+    currentWeather: CurrentWeather?,
     modifier: Modifier = Modifier,
-    onChange: (WeatherForecast) -> Unit
+    onChange: (WeatherForecast) -> Unit,
+    onWeatherFetched: (CurrentWeather) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -83,12 +89,15 @@ fun Greeting(
             modifier = modifier
         )
 
+        currentWeather?.let {
+            Text(text = "Weather is ${it.weather} currently ${it.temperature}, min: ${it.minTemperature}, max: ${it.maxTemperature}")
+        } ?: Text(text = "Weather not fetched yet")
+
         Button(onClick = {
             calendar.time = currentForecast.date
             calendar.add(Calendar.DAY_OF_MONTH, 1)
 
-            val weather =
-                Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
+            val weather = Weather.entries[(currentForecast.weather.ordinal + 1) % Weather.entries.size]
 
             // calendar.time is creating a new Date object on the fly, weird huh
             val updatedForecast = currentForecast.copy(
@@ -103,13 +112,13 @@ fun Greeting(
             scope.launch {
                 // No need to wrap this in withContext(Dispatchers.IO) anymore!
                 // The function handles its own threading.
-                doNetworkCall(context)
+                fetchWeatherData(context, onWeatherFetched)
             }
         }) { Text(text = "How would tomorrow be?") }
     }
 }
 
-fun doNetworkCall(context: Context) {
+fun fetchWeatherData(context: Context, onResult: (CurrentWeather) -> Unit) {
     val queue = Volley.newRequestQueue(context)
     val url =
         "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1&&current=weather_code,temperature_2m"
@@ -125,12 +134,12 @@ fun doNetworkCall(context: Context) {
         val currentTemperature = currentNode.getDouble("temperature_2m")
 
         val weather = Weather.fromCode(weatherCode)
-        val currentWeather =
-            CurrentWeather(weather, currentTemperature, minTemperature, maxTemperature)
+        val currentWeather = CurrentWeather(weather, currentTemperature, minTemperature, maxTemperature)
         Log.i(
             "Network",
             "Weather is ${currentWeather.weather} currently ${currentWeather.temperature}, min: ${currentWeather.minTemperature}, max: ${currentWeather.maxTemperature}"
         )
+        onResult(currentWeather)
     }, { error ->
         // Error: handle the exception
         Log.e("Network", "That didn't work: ${error.message}")
@@ -143,7 +152,11 @@ fun doNetworkCall(context: Context) {
 @Composable
 fun GreetingPreview() {
     HelloWorldManagingStateTheme {
-        Greeting(WeatherForecast(Date(), Weather.PARTLY_CLOUDY, DEFAULT_TEMPERATURE), onChange = {})
+        Greeting(
+            WeatherForecast(Date(), Weather.PARTLY_CLOUDY, DEFAULT_TEMPERATURE),
+            null,
+            onChange = {},
+            onWeatherFetched = {})
     }
 }
 

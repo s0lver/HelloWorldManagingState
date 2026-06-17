@@ -1,6 +1,6 @@
 package com.s0lver.helloworldmanagingstate
 
-data class CurrentWeather(
+data class WeatherRecord(
     val weather: Weather,
     val temperature: Double,
     val minTemperature: Double,

@@ -27,19 +27,20 @@ import com.android.volley.toolbox.Volley
 import com.s0lver.helloworldmanagingstate.ui.theme.HelloWorldManagingStateTheme
 import kotlinx.coroutines.launch
 
-private const val API_URL = "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1&&current=weather_code,temperature_2m"
+private const val API_URL =
+    "https://api.open-meteo.com/v1/forecast?latitude=37.3688&longitude=-122.0363&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FLos_Angeles&forecast_days=1&&current=weather_code,temperature_2m"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var currentWeather by remember { mutableStateOf<CurrentWeather?>(null) }
+            var currentWeather by remember { mutableStateOf<WeatherRecord?>(null) }
 
             HelloWorldManagingStateTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        currentWeather = currentWeather,
+                        weatherRecord = currentWeather,
                         modifier = Modifier.padding(innerPadding),
                         onWeatherFetched = { currentWeather = it })
                 }
@@ -50,16 +51,19 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(
-    currentWeather: CurrentWeather?,
+    weatherRecord: WeatherRecord?,
     modifier: Modifier = Modifier,
-    onWeatherFetched: (CurrentWeather) -> Unit
+    onWeatherFetched: (WeatherRecord) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     Column {
-        currentWeather?.let {
-            Text(text = "Weather is ${it.weather} currently ${it.temperature}, min: ${it.minTemperature}, max: ${it.maxTemperature}", modifier = modifier)
+        weatherRecord?.let {
+            Text(
+                text = "Weather is ${it.weather} currently ${it.temperature}, min: ${it.minTemperature}, max: ${it.maxTemperature}",
+                modifier = modifier
+            )
         } ?: Text(text = "Weather not fetched yet", modifier = modifier)
 
         Button(onClick = {
@@ -73,7 +77,7 @@ fun Greeting(
     }
 }
 
-fun fetchWeatherData(context: Context, onResult: (CurrentWeather) -> Unit) {
+fun fetchWeatherData(context: Context, onResult: (WeatherRecord) -> Unit) {
     val queue = Volley.newRequestQueue(context)
 
     val jsonRequest = JsonObjectRequest(Request.Method.GET, API_URL, null, { response ->
@@ -87,11 +91,12 @@ fun fetchWeatherData(context: Context, onResult: (CurrentWeather) -> Unit) {
         val currentTemperature = currentNode.getDouble("temperature_2m")
 
         val weather = Weather.fromCode(weatherCode)
-        val currentWeather = CurrentWeather(weather, currentTemperature, minTemperature, maxTemperature)
+        val newWeather =
+            WeatherRecord(weather, currentTemperature, minTemperature, maxTemperature)
 
         // Passing a different reference back in the event causes the Composable to see that a
         // new object is returned and forcing the UI update
-        onResult(currentWeather)
+        onResult(newWeather)
     }, { error ->
         // Error: handle the exception
         Log.e("Network", "That didn't work: ${error.message}")
